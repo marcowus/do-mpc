@@ -53,7 +53,7 @@ class DoMPCAdapter:
 
         return x_next.flatten()
 
-    def generate_trajectories(self, num_traj, traj_len, x0_center=None, x0_range=1.0):
+    def generate_trajectories(self, num_traj, traj_len, x0_center=None, x0_range=1.0, u_center=None, u_range=1.0):
         """
         Generate random trajectories for Koopman ID.
         """
@@ -68,6 +68,12 @@ class DoMPCAdapter:
         if isinstance(x0_center, (list, np.ndarray)):
             x0_center = np.array(x0_center).reshape(self.n_state_obs, 1)
 
+        if u_center is None:
+            u_center = np.zeros((self.n_control, 1))
+
+        if isinstance(u_center, (list, np.ndarray)):
+            u_center = np.array(u_center).reshape(self.n_control, 1)
+
         for i in range(num_traj):
             # Random initial state around center
             x0 = x0_center + np.random.uniform(-x0_range, x0_range, (self.n_state_obs, 1))
@@ -80,8 +86,8 @@ class DoMPCAdapter:
             traj_u = []
 
             for _ in range(traj_len):
-                # Random control
-                u_k = np.random.uniform(-1, 1, (self.n_control, 1))
+                # Random control around center
+                u_k = u_center + np.random.uniform(-u_range, u_range, (self.n_control, 1))
 
                 x_next = self.simulator.make_step(u_k)
 

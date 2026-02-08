@@ -4,7 +4,9 @@ import sys
 def get_example_config(dir_path):
     config = {
         'x0_center': 'None',
-        'x0_range': '1.0'
+        'x0_range': '1.0',
+        'u_center': 'None',
+        'u_range': '1.0'
     }
 
     # Simple heuristic based on directory name
@@ -12,26 +14,42 @@ def get_example_config(dir_path):
         # C_a, C_b, T_R, T_K
         config['x0_center'] = "[0.8, 0.5, 134.14, 130.0]"
         config['x0_range'] = "0.1"
+        # u: Q_dot, F. F must be positive.
+        # Assuming F ~ 100? main.py sets limits F in [0, 100]?
+        # Let's use a safe range.
+        config['u_center'] = "[-10.0, 50.0]"
+        config['u_range'] = "20.0" # Q: [-30, 10], F: [30, 70]
     elif "Lotka_Volterra" in dir_path:
         # x_0, x_1
         config['x0_center'] = "[0.5, 0.7]"
         config['x0_range'] = "0.1"
+        # u: inp > 0?
+        config['u_center'] = "[0.5]"
+        config['u_range'] = "0.5"
     elif "batch_reactor" in dir_path:
         # X_s, S_s, P_s, V_s
         config['x0_center'] = "[1.0, 0.5, 0.0, 120.0]"
         config['x0_range'] = "0.1"
+        # u: inp > 0
+        config['u_center'] = "[0.5]"
+        config['u_range'] = "0.5"
     elif "oscillating_masses" in dir_path:
         # x1, v1, x2, v2
         config['x0_center'] = "[0.0, 0.0, 0.0, 0.0]"
         config['x0_range'] = "0.5"
+        config['u_center'] = "[0.0]"
+        config['u_range'] = "1.0"
     elif "pendulum" in dir_path:
         # pos, vel, pos, vel
         config['x0_center'] = "[0.0, 0.0, 0.0, 0.0]"
         config['x0_range'] = "0.5"
     elif "triple_tank" in dir_path:
         # h1, h2, h3
-        config['x0_center'] = "[10.0, 10.0, 10.0]" # Guess
+        config['x0_center'] = "[10.0, 10.0, 10.0]"
         config['x0_range'] = "2.0"
+        # u: pumps > 0
+        config['u_center'] = "[0.5, 0.5]"
+        config['u_range'] = "0.5"
 
     return config
 
@@ -100,10 +118,14 @@ def main():
     # Example-specific configuration
     x0_center = {config['x0_center']}
     x0_range = {config['x0_range']}
+    u_center = {config['u_center']}
+    u_range = {config['u_range']}
 
     try:
         state_trajs_obs, control_trajs, _ = adapter.generate_trajectories(
-            NUM_TRAJ_KOOPMAN, TRAJ_LEN_KOOPMAN, x0_center=x0_center, x0_range=x0_range
+            NUM_TRAJ_KOOPMAN, TRAJ_LEN_KOOPMAN,
+            x0_center=x0_center, x0_range=x0_range,
+            u_center=u_center, u_range=u_range
         )
     except Exception as e:
         logger.error(f"Failed to generate trajectories: {{e}}")
@@ -138,9 +160,25 @@ def main():
         'dt': adapter.dt
     }}
 
+    # Determine control limits for MPC from u_center/range if available, or defaults
+    if u_center is not None and u_range is not None:
+        uc = np.array(u_center).flatten()
+        ur = np.array(u_range).flatten()
+        # If scalar provided but multiple controls, broadcast
+        if len(uc) == 1 and adapter.n_control > 1:
+            uc = np.repeat(uc, adapter.n_control)
+        if len(ur) == 1 and adapter.n_control > 1:
+            ur = np.repeat(ur, adapter.n_control)
+
+        control_lb = (uc - ur).tolist()
+        control_ub = (uc + ur).tolist()
+        control_limits = (control_lb, control_ub)
+    else:
+        control_limits = None
+
     logger.info("--- Stage 3: Initialising Koopman MPC Controller ---")
     try:
-        koopman_mpc = KoopmanMPC(system_params_dict, koopman_model_tuple, MPC_HORIZON, initial_theta_cost_log_weights)
+        koopman_mpc = KoopmanMPC(system_params_dict, koopman_model_tuple, MPC_HORIZON, initial_theta_cost_log_weights, control_limits=control_limits)
     except Exception as e:
         logger.error(f"Failed to initialize Koopman MPC: {{e}}")
         return

@@ -34,20 +34,20 @@ def main():
         logger.error(f"Failed to setup system: {e}")
         return
 
-    x0_op = np.array([0.8, 0.5, 134.14, 130.0])
-    target_state = np.array([0.8, 0.5, 134.14, 130.0])
-    x0_perturbed = x0_op + np.array([0.0, 0.0, -2.0, -2.0])
+    x0_op = np.array([10.0, 10.0, 10.0])
+    target_state = np.array([10.0, 10.0, 10.0])
+    x0_perturbed = x0_op + np.array([2.0, 0.0, -2.0])
 
     # Generate Data
     logger.info("Generating Training Data...")
     x_center = x0_op.reshape(-1, 1)
-    u_center = np.array([-10.0, 50.0]).reshape(-1, 1)
+    u_center = np.array([0.5, 0.5]).reshape(-1, 1)
 
     try:
         X, U, _ = adapter.generate_trajectories(
             num_traj=20, traj_len=100,
             x0_center=x_center, x0_range=2.0,
-            u_center=u_center, u_range=10.0
+            u_center=u_center, u_range=0.5
         )
     except Exception as e:
         logger.error(f"Failed to generate trajectories: {e}")
@@ -71,13 +71,13 @@ def main():
     km.fit(X_train, Y_train, U_train, dt=adapter.dt)
 
     # Controller
-    Tp = 0.5
+    Tp = 50.0
     controller = PrescribedTimeKoopmanBacksteppingController(
         target_state, Tp=Tp, sigma=(5.0, 5.0),
         dt=adapter.dt, alpha_switch=0.9, filter_alpha=0.8,
-        state_indices=(2, 3),
+        state_indices=(2, 0),
         input_index=0,
-        output_limits=(-5000, 5000)
+        output_limits=(-1, 2)
     )
 
     n_x = adapter.n_state_obs

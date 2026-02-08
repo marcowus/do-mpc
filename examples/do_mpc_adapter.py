@@ -48,10 +48,11 @@ class DoMPCAdapter:
         self.simulator.x0 = x_curr_reshaped
 
         # Make step
-        # simulator.make_step(u0) returns x_next
-        x_next = self.simulator.make_step(u_curr_reshaped)
+        self.simulator.make_step(u_curr_reshaped)
 
-        return x_next.flatten()
+        # Return full state (simulator.x0 is updated)
+        # We need full state, not just measurement returned by make_step
+        return self.simulator.x0.cat.full().flatten()
 
     def generate_trajectories(self, num_traj, traj_len, x0_center=None, x0_range=1.0, u_center=None, u_range=1.0):
         """
@@ -89,9 +90,10 @@ class DoMPCAdapter:
                 # Random control around center
                 u_k = u_center + np.random.uniform(-u_range, u_range, (self.n_control, 1))
 
-                x_next = self.simulator.make_step(u_k)
+                self.simulator.make_step(u_k)
+                x_next = self.simulator.x0.cat.full().flatten()
 
-                traj_x.append(x_next.flatten())
+                traj_x.append(x_next)
                 traj_u.append(u_k.flatten())
 
             state_traj_list.append(np.array(traj_x))

@@ -70,7 +70,9 @@ def template_mpc(model, silence_solver = False):
 
     # setting up upper boundaries for the states
     mpc.bounds['upper', '_x','X_s'] = 3.7
+    mpc.bounds['upper', '_x','S_s'] = 250.0
     mpc.bounds['upper', '_x','P_s'] = 3.0
+    mpc.bounds['upper', '_x','V_s'] = 250.0
 
     # setting up boundaries for the inputs
     mpc.bounds['lower','_u','inp'] = 0.0

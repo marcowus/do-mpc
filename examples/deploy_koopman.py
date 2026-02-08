@@ -6,7 +6,8 @@ def get_example_config(dir_path):
         'x0_center': 'None',
         'x0_range': '1.0',
         'u_center': 'None',
-        'u_range': '1.0'
+        'u_range': '1.0',
+        'model_init': 'model = template_model()'
     }
 
     # Simple heuristic based on directory name
@@ -15,8 +16,6 @@ def get_example_config(dir_path):
         config['x0_center'] = "[0.8, 0.5, 134.14, 130.0]"
         config['x0_range'] = "0.1"
         # u: Q_dot, F. F must be positive.
-        # Assuming F ~ 100? main.py sets limits F in [0, 100]?
-        # Let's use a safe range.
         config['u_center'] = "[-10.0, 50.0]"
         config['u_range'] = "20.0" # Q: [-30, 10], F: [30, 70]
     elif "Lotka_Volterra" in dir_path:
@@ -39,10 +38,23 @@ def get_example_config(dir_path):
         config['x0_range'] = "0.5"
         config['u_center'] = "[0.0]"
         config['u_range'] = "1.0"
-    elif "pendulum" in dir_path:
-        # pos, vel, pos, vel
-        config['x0_center'] = "[0.0, 0.0, 0.0, 0.0]"
+    elif "double_inverted_pendulum" in dir_path:
+        # 6 states: pos, theta1, theta2, dpos, dtheta1, dtheta2
+        config['x0_center'] = "[0.0, 0.0, 0.0, 0.0, 0.0, 0.0]"
         config['x0_range'] = "0.5"
+        config['model_init'] = "model = template_model(obstacles=[{'x': 100, 'y': 100, 'r': 0.1}])"
+    elif "pendulum" in dir_path:
+        # pos, vel, pos, vel (Simple pendulum is usually 2 or 4 states depending on implementation)
+        # double_inverted_pendulum is handled above.
+        # Check standard pendulum if exists?
+        # Assuming 4 for general case or check n_x later.
+        # Actually safer to not set x0_center if unknown n_x, but we set 'None' by default.
+        # But 'pendulum' block sets it to 4 zeros.
+        # If there is another pendulum example with different states, it might fail.
+        # Let's revert default 'pendulum' block to use None if not sure.
+        # But for 'double_inverted_pendulum' we need 6.
+        pass
+
     elif "triple_tank" in dir_path:
         # h1, h2, h3
         config['x0_center'] = "[10.0, 10.0, 10.0]"
@@ -101,7 +113,7 @@ def main():
 
     # 1. Setup do_mpc model and simulator
     try:
-        model = template_model()
+        {config['model_init']}
         simulator = template_simulator(model)
     except Exception as e:
         logger.error(f"Failed to initialize do_mpc model/simulator: {{e}}")

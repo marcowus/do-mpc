@@ -34,7 +34,7 @@ def main():
 
     # 1. Setup do_mpc model and simulator
     try:
-        model = template_model()
+        model = template_model(obstacles=[{'x': 100, 'y': 100, 'r': 0.1}])
         simulator = template_simulator(model)
     except Exception as e:
         logger.error(f"Failed to initialize do_mpc model/simulator: {e}")
@@ -49,7 +49,7 @@ def main():
     logger.info("--- Stage 1: Generating Data for Koopman ID ---")
 
     # Example-specific configuration
-    x0_center = [0.0, 0.0, 0.0, 0.0]
+    x0_center = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     x0_range = 0.5
     u_center = None
     u_range = 1.0

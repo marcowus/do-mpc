@@ -65,7 +65,7 @@ def template_mpc(model):
     mpc.bounds['lower', '_x', 'x_0'] = 0.0
     mpc.bounds['lower', '_x', 'x_1'] = 0.0
     mpc.bounds['upper', '_x', 'x_0'] = 2.0
-    mpc.bounds['upper', '_x', 'x_0'] = 2.0
+    mpc.bounds['upper', '_x', 'x_1'] = 2.0
     mpc.bounds['lower', '_u', 'inp'] = 0.0
     mpc.bounds['upper', '_u', 'inp'] = 1.0
 
